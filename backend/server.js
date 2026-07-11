@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const http = require('http'); // Native Node.js HTTP module
+const path = require('path'); // Static path resolve karne ke liye
 const { initDatabase } = require('./database/db.js');
 const { initSocket } = require('./socket/socket.js'); // Import socket bootstrapper
 
@@ -23,18 +24,29 @@ initSocket(server);
 app.use(cors());
 app.use(express.json());
 
+// ==========================================
+// 📡 API ENDPOINTS
+// ==========================================
 app.use('/api/health', healthRouter);
-// Test endpoint directly inline
 app.post('/api/inventory/purchase-test', (req, res) => {
     res.json({ message: "Direct server logic hit working perfectly!" });
 });
 app.use('/api/inventory', inventoryRouter);
 
-app.use((req, res) => {
-    res.status(404).json({ error: 'Endpoint not found' });
+// ==========================================
+// 🌐 FRONTEND STATIC SERVING (For Production)
+// ==========================================
+// Render par hamari root directory 'backend' hai, isliye '../frontend/dist' perfectly link hoga
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// Koi bhi generic non-API web route hit ho, toh React ki main index.html file serve karna
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
-// 🚀 CRITICAL: We now run server.listen instead of app.listen to support standard sockets
+// ==========================================
+// 🚀 SERVER BOOTSTRAP
+// ==========================================
 server.listen(PORT, () => {
     console.log(`=========================================`);
     console.log(`🚀 Real-Time Engine Active & Online!`);
