@@ -23,7 +23,7 @@ function initDatabase() {
     if (row.count === 0) {
         db.prepare(`
             INSERT INTO inventory (item_name, stock, price) 
-            VALUES ('Quantum CPU Core v4', 10, 299.99)
+            VALUES ('Quantum CPU Core v4', 50, 299.99)
         `).run();
         console.log('📦 Database seeded successfully with core resources!');
     }
