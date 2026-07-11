@@ -1,51 +1,45 @@
-const inventoryService = require('../services/inventory.service.js');
-const { broadcastStock } = require('../socket/socket.js');
+const { db } = require('../database/db.js');
 
-const getStatus = async (req, res) => {
+const getInventoryStatus = (req, res) => {
     try {
-        const item = await inventoryService.getItemById(1);
+        const item = db.prepare('SELECT * FROM inventory WHERE id = 1').get();
         if (!item) {
-            return res.status(404).json({ error: 'Item not found' });
+            return res.status(404).json({ message: 'Resource pool not found' });
         }
         res.status(200).json(item);
     } catch (error) {
-        res.status(500).json({ error: 'Database fetch error: ' + error.message });
+        res.status(500).json({ error: error.message });
     }
 };
 
-const purchase = async (req, res) => {
+const processPurchase = (req, res) => {
+    // Direct operational transaction closure block using better-sqlite3 transactions
+    const executeTransaction = db.transaction(() => {
+        const item = db.prepare('SELECT * FROM inventory WHERE id = 1').get();
+        
+        if (!item || item.stock <= 0) {
+            throw new Error('Atomic zero reached. Transaction halted.');
+        }
+
+        db.prepare('UPDATE inventory SET stock = stock - 1 WHERE id = 1').run();
+        
+        const updatedItem = db.prepare('SELECT * FROM inventory WHERE id = 1').get();
+        return updatedItem;
+    });
+
     try {
-        const itemId = 1;
-        const success = await inventoryService.purchaseItemAtomic(itemId);
+        const updatedItem = executeTransaction();
         
-        if (!success) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Transaction failed. Item is completely out of stock!' 
-            });
+        // Emit global state via WebSockets
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('stock_updated', updatedItem);
         }
 
-        const updatedItem = await inventoryService.getItemById(itemId);
-        
-        // Socket broadcast if running
-        try {
-            broadcastStock(updatedItem);
-        } catch (sErr) {
-            console.log("Socket broadcast skipped, frontend not connected yet.");
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Purchase completed successfully!',
-            item: updatedItem
-        });
+        res.status(200).json({ message: 'Secured purchase sequence cleared', item: updatedItem });
     } catch (error) {
-        res.status(500).json({ error: 'Transaction processing error: ' + error.message });
+        res.status(400).json({ message: error.message });
     }
 };
 
-// CRITICAL: Make sure both functions are exported cleanly!
-module.exports = {
-    getStatus,
-    purchase
-};
+module.exports = { getInventoryStatus, processPurchase };
