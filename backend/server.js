@@ -28,8 +28,14 @@ app.use(express.json());
 // 📡 API ENDPOINTS
 // ==========================================
 app.use('/api/health', healthRouter);
+// app.post('/api/inventory/purchase-test', (req, res) => {
+//     res.json({ message: "Direct server logic hit working perfectly!" });
+// });
+// Temporary stock update logic
 app.post('/api/inventory/purchase-test', (req, res) => {
-    res.json({ message: "Direct server logic hit working perfectly!" });
+    const { db } = require('./database/db.js');
+    db.prepare('UPDATE inventory SET stock = 50 WHERE id = 1').run();
+    res.json({ message: "Live stock updated to 50 successfully!" });
 });
 app.use('/api/inventory', inventoryRouter);
 
