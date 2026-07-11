@@ -28,15 +28,21 @@ app.use(express.json());
 // 📡 API ENDPOINTS
 // ==========================================
 app.use('/api/health', healthRouter);
-// app.post('/api/inventory/purchase-test', (req, res) => {
-//     res.json({ message: "Direct server logic hit working perfectly!" });
-// });
-// Temporary stock update logic
-app.post('/api/inventory/purchase-test', (req, res) => {
+
+// 👉 IMPORTANT: Isko GET kar diya hai taaki browser se directly hit ho sake
+app.get('/api/inventory/purchase-test', (req, res) => {
     const { db } = require('./database/db.js');
+    // Live database mein stock 50 update karega
     db.prepare('UPDATE inventory SET stock = 50 WHERE id = 1').run();
-    res.json({ message: "Live stock updated to 50 successfully!" });
+    
+    // Naya data fetch karke screen par dikhayega confirm karne ke liye
+    const updatedItem = db.prepare('SELECT * FROM inventory WHERE id = 1').get();
+    res.json({ 
+        message: "Live stock updated to 50 successfully!", 
+        current_db_state: updatedItem 
+    });
 });
+
 app.use('/api/inventory', inventoryRouter);
 
 // ==========================================
@@ -45,14 +51,11 @@ app.use('/api/inventory', inventoryRouter);
 // Render par hamari root directory 'backend' hai, isliye '../frontend/dist' perfectly link hoga
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// // Koi bhi generic non-API web route hit ho, toh React ki main index.html file serve karna
-// app.get('*', (req, res) => {
-//     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-// });
-// ISKO LAGAIYE (New Express v5/path-to-regexp rule)  
+// Express v5 / path-to-regexp v8 crash fix regex wildcard route
 app.get(/.*$/, (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
+
 // ==========================================
 // 🚀 SERVER BOOTSTRAP
 // ==========================================
