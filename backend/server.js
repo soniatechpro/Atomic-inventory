@@ -39,11 +39,14 @@ app.use('/api/inventory', inventoryRouter);
 // Render par hamari root directory 'backend' hai, isliye '../frontend/dist' perfectly link hoga
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// Koi bhi generic non-API web route hit ho, toh React ki main index.html file serve karna
-app.get('*', (req, res) => {
+// // Koi bhi generic non-API web route hit ho, toh React ki main index.html file serve karna
+// app.get('*', (req, res) => {
+//     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+// });
+// ISKO LAGAIYE (New Express v5/path-to-regexp rule)  
+app.get(/.*$/, (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
-
 // ==========================================
 // 🚀 SERVER BOOTSTRAP
 // ==========================================
